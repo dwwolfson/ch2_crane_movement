@@ -1,0 +1,91 @@
+# PCA with dist2cent results"
+library(ggplot2)
+library(cluster)
+library(ggfortify)
+library(gridExtra)
+library(ggbiplot)
+library(dplyr)
+
+rm(list=ls())
+#Import centroid summary datasets
+adults16<-read.csv("output/comp.adult.centroid.summaries.df.2016.csv")
+adults16$age<-"adult"
+adults16$year<-2016
+#Take out adult roaming at beginning and end of season
+# The beginning (only one crane) because it was getting to its territory
+adults16<-adults16[!(adults16$id=="4E Larson adult #1"&adults16$set_roam=="roam"),]
+adults16<-adults16[!(adults16$id=="5J (Deglman #3)"&adults16$set_roam=="roam"),]
+adults16<-adults16[!(adults16$id=="2M (Bagley)"&adults16$set_roam=="roam"),]
+adults16<-adults16[!(adults16$id=="6E (Linden-Kologi)"&adults16$set_roam=="roam"),]
+# The one remaining adult roaming period (Santiago #1) was during the middle of the season
+# and seems like it should stay in.
+
+colts16<-read.csv("output/colt.centroid.df.2016.csv")
+colts16$age<-"colt"
+colts16$year<-2016
+# There aren't any roaming events that are at the end of the season and 
+# should be excluded because they are staging
+
+adults17<-read.csv("output/comp.adult.centroid.summaries.2017.df.csv")
+adults17$age<-"adult"
+adults17$year<-2017
+
+colts17<-read.csv("output/colt.centroid.summaries.2017.df.csv")
+colts17$age<-"colt"
+colts17$year<-2017
+# There aren't any roaming events that are at the end of the season and 
+# should be excluded because they are staging
+
+df<-rbind(adults17, colts17, adults16, colts16)
+df$age<-as.factor(df$age)
+df$year<-as.factor(df$year)
+
+df$age.phase<-paste(df$age, df$set_roam, sep="-")
+df$age.phase<-as.factor(df$age.phase)
+
+
+
+
+covs<-df[,c(4:10)]
+autoplot(prcomp(covs, scale. = T), data=df, colour='set_roam', shape='age',
+         size=2.5, loadings=TRUE, loadings.colour='blue',
+         loadings.label=TRUE)+ggtitle("PCA with mean/max/sd of dist2centroid and n_days")+
+          theme(plot.title=element_text(hjust=0.5))+facet_wrap(~year)
+              
+autoplot(prcomp(covs, scale. = T), data=df, colour='age.phase',
+         size=2.5, loadings=TRUE, loadings.colour='blue',
+         loadings.label=TRUE)+ggtitle("PCA with mean/max of dist2centroid and n_days")+
+  theme(plot.title=element_text(hjust=0.5))+facet_wrap(~year)
+
+### Another alternative using biplot package
+pca<-prcomp(covs, center=T, scale. = T)
+age<-df$age
+mode<-df$set_roam
+age.phase<-df$age.phase
+pca.output<-print(pca)
+plot(pca, type="l")
+summary(pca)
+
+g <- ggbiplot(pca, obs.scale = 1, var.scale = 1,
+              groups=age.phase,ellipse = T, alpha=0, ellipse.prob = 0.7)
+g <- g + theme(legend.direction = 'horizontal',
+               legend.position = 'top')
+g+geom_point(aes_string(colour=as.factor(age.phase)), size=2)+
+  labs(shape="")+ggtitle("PCA with mean/max of dist2centroid and n_days")+
+  theme(plot.title=element_text(hjust=0.5))
+
+# Try with less covariates
+covs<-df[,c(5,8)]
+pca<-prcomp(covs, center=T, scale. = T)
+print(pca)
+summary(pca)
+g <- ggbiplot(pca, obs.scale = 1, var.scale = 1,
+              groups=age.phase,ellipse = T, alpha=0, ellipse.prob = 0.7)
+g <- g + theme(legend.direction = 'horizontal',
+               legend.position = 'top')
+g+geom_point(aes_string(colour=as.factor(age.phase)), size=2)+
+  labs(shape="")+ggtitle("PCA with mean and # of locations")+
+  theme(plot.title=element_text(hjust=0.5))
+
+
+
