@@ -1,5 +1,6 @@
 # Event chart of roaming vs settled periods
 library(ggplot2)
+library(dplyr)
 
 rm(list=ls())
 #Import the raw 'dist2centroid' dataframes
