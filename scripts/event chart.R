@@ -44,6 +44,9 @@ p<-ggplot(data=dat, aes(x=day, y=id, colour=mode))+geom_line(size=1.5)+
   theme(plot.title=element_text(hjust=0.5))+xlab("Julian Date")+
   theme(strip.text = element_text(size=14))
 
+averages<-dat%>%
+  group_by(age, year, mode, id)%>%
+  summarise(sum(length(unique(day))))
 
 # For some reason the 3-day roaming period for Pelican Rapids colt 2017 isn't showing up in 
 # the plot, maybe because it's such a short period, it's in the dataframe correctly though.
