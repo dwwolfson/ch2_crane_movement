@@ -1,7 +1,7 @@
 # Get most complete data from movebank
 library(move)
 
-login<-movebankLogin(username="wolfs064", password="Poutinecart2!")
+login<-movebankLogin(username="wolfs064", password="gov_pwd_with_a_2")
 
 #download all data
 # crane_data<-getMovebankData(study="Grus canadensis Minnesota", login=login)
