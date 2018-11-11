@@ -26,7 +26,7 @@ summer18<-interval(ymd("20180501", tz="UTC"), ymd("20180801", tz="UTC") )
 summers<-list(summer14, summer15, summer16, summer17, summer18)
 ind<-crane$timestamp %within% summers
 cranesummer<-crane %>% filter(ind==TRUE)
-rm(crane) #take object out of workspace to save on memory
+
 
 #Cut out locations east of -93 long
 # We can switch to a method using NSD instead but stick with this for now
@@ -60,8 +60,11 @@ adult.list<-c("0J (Waubun adult #2)", "0K Deglman #1","1J (Santiago #3)" ,
 
 cr<-mutate(cr, age=ifelse(id%in%adult.list, "adult", "colt"))
 
+#add year
+cr$year<-year(cr$t)
+
 #Save to file 
-write_csv(cr, 'processed_data/projected_df.csv')
+# write_csv(cr, 'processed_data/projected_df.csv')
 
 # Quantify revisits and duration associated with each location using a nested data frame
 cr<-as.tibble(cr)
@@ -71,20 +74,19 @@ head(cranenest)
 # Need to drop out cranes that died before continuing with analysis?
 # Based on my knowledge of who died? Same as in ch2 to be able to compare results?
 
-# Now, get time duration and revisits associated with each location. The key will be to choose a reasonable radius. 
-# If this is too small (say r = 0.2), then we will find that all adults use a single spot for a really long duration. 
-# With smaller radii, we see that adults tend to revisit more spots and use them for longer durations. 
-
+#Test radius values
 
 unique.ids<-unique(cranesummer$id)
 luid<-length(unique.ids)
-bigrevisitdat<-NULL
+df<-data.frame()
 
-r<-seq(1,1000, by = 10) # can change radius
+r<-seq(1,200, by = 10) # can change radius
 for(j in 1:length(r)){
 for(i in 1: luid){
   # pull off data from individual
-  tempdat<-cranesummer %>% filter(id==unique.ids[i])
+  tempdat<-cr %>% filter(id==unique.ids[i])
+  tempdat<-tempdat[,c('x', 'y', 'id', 't')]
+  tempdat$id<-as.factor(tempdat$id)
   
   # estimate time durations and revisits for radius r
   temprecurs<-getRecursions(as.data.frame(tempdat), j)
@@ -94,47 +96,27 @@ for(i in 1: luid){
                                            revisits=temprecurs$revisits, 
                                            durations=temprecurs$residenceTime,
                                            timeunits=temprecurs$timeunits, radius=r[j])
-   write.csv(tmpdat, file = paste0("output/radius_", j, ".csv"))
+   sums <- tmpdat %>% group_by(id) %>% summarize(meanrevisit=mean(revisits),
+                                                              meandur=mean(durations),
+                                                   varlog_visit=var(log(revisits)),
+                                                   varlog_duration=var(log(durations)),
+                                                   radius=r[j])
+   df<-rbind(df, sums)
+   
 }}
 
 
-
-#summary stats
-# Could also explore plots over time (or for early/late season)
-revisitdat$month<-month(revisitdat$timestamp)
-revisitdat$year<-year(revisitdat$timestamp)
-
-sumstats <- revisitdat %>% group_by(id, age) %>% summarize(meanrevisit=mean(revisits),
-                                                                meandur=mean(durations))
-months<-revisitdat %>% group_by(id, age, month) %>% summarize(meanrevisit=mean(revisits),
-                                                       meandur=mean(durations))
-
-yeardat<-revisitdat %>% group_by(id, age, year) %>% summarize(meanrevisit=mean(revisits),
-                                                             meandur=mean(durations))
-# Plot mean revisit and meandur by ageclass
-
-p<-ggplot(sumstats, aes(x=meanrevisit, y=meandur, color=age)) + geom_point(aes(text=id), size=2) +
-  xlab("Mean number of revisits")+ylab("Mean Duration")
-p<-ggplotly(p)
-yr<-ggplot(yeardat, aes(x=meanrevisit, y=meandur, color=age)) + geom_point(aes(text=id), size=2) +
-  xlab("Mean number of revisits")+ylab("Mean Duration")+facet_grid(year~., scales='free')
-yr<-ggplotly(yr)
-mo<-ggplot(months, aes(x=meanrevisit, y=meandur, color=age)) + geom_point(aes(text=id), size=2) +
-  xlab("Mean number of revisits")+ylab("Mean Duration")+facet_grid(month~., scales='free')
-mo<-ggplotly(mo)
+ggplot(df, aes(radius, varlog_visit, color=id))+geom_line()+
+  theme(legend.position = 'none')
 
 
-m1<-lmer(revisits~age+month+(1|id), revisitdat)
-plot(m1)#bad
-hist(revisitdat$revisits)
-hist(log(revisitdat$revisits))
-m2<-lmer(log(revisits)~age+month+(1|id), revisitdat)
-plot(m2)
-m3<-lmer(log(revisits)~age+(1|id)+(1|year), revisitdat)
-summary(m3)
-plot(m3)
-ranef(m3)
-m4<-lmer(log(revisits)~age + (1|id)+(1+age|year), revisitdat)
-table(revisitdat$year, revisitdat$id)
+
+df<-mutate(df, age=ifelse(id%in%adult.list, "adult", "colt"))
+
+p<-ggplot(df, aes(radius, varlog_visit, color=id))+geom_line()+
+  theme(legend.position = 'none')+facet_wrap(~age)
+
+
+
 
 
