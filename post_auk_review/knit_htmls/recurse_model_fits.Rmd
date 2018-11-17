@@ -1,0 +1,128 @@
+Load libraries
+```{r setup}
+knitr::opts_knit$set(root.dir = "D:/Data_Documents/Cranes/ch2_crane_movement/post_auk_review/saved_model_objects")
+```
+
+```{r warning=FALSE, message=FALSE}
+library(data.table)
+library(RColorBrewer)
+library(recurse)
+library(tidyverse)
+library(lubridate)
+library(amt)
+library(sp)
+library(lme4)
+library(splines)
+library(mgcv)
+library(knitr)
+library(sjPlot)
+library(mgcViz)
+library(ezknitr)
+options(width=160)
+```
+
+
+```{r}
+# cr_recurse<-read_csv("processed_data/recurse_dat_150m.csv")
+# ```
+#
+# ### Revisitation model fitting
+#
+# ```{r }
+# m1<-lmer(log(revisits)~age+juliand + age*juliand+ (1|id/yr), data=cr_recurse, REML=T)
+#
+# cr_recurse$sjd<-scale(cr_recurse$juliand)
+# m2<-glmer.nb(revisits~age+sjd + age*sjd+(1|id), data=cr_recurse, REML=T)
+# ```
+#
+# We fit similar models using gam, but this also allows
+# us to allow the effect of julian date to vary smoothly
+#
+# ```{r }
+# m3<-gam(log(revisits)~age+s(juliand, by=age)+s(id, bs="re"), data=cr_recurse)
+# ```
+#
+# Gam also appears to allow fitting of negative binomial models.
+# This may be one to consider...
+#
+# ```{r }
+# m4<-gam(revisits~age+s(juliand, by=age)+s(id, bs="re"), family=nb(), data=cr_recurse, REML=TRUE)
+# ```
+#
+# Effect of day by each crane
+#
+# ```{r }
+# # m5<-gam(revisits~age + s(juliand, by=id), family=nb, data=cr_recurse, REML=TRUE) #didn't converge
+#
+# # Negative binomial with random slopes
+# m6<-glmer.nb(revisits~age+juliand+(1+juliand|id), data=cr_recurse)
+# m7<-glmer.nb(revisits~age+sjd+(1+sjd|id), data=cr_recurse) #scaled version (julian day) of prior model; ran much faster
+```
+
+
+#########
+
+```{r}
+#models to import
+# mlist<-c('m1.rds', 'm2.rds', 'm3.rds', 'm4.rds', 'm6.rds', 'm7.rds', 'd7.rds', 'd8.rds')
+# mods<-lapply(mlist, readRDS)
+# list2env(mods) #didn't work
+m1<-readRDS('m1.rds')
+m2<-readRDS('m2.rds')
+m3<-readRDS('m3.rds')
+m4<-readRDS('m4.rds')
+m6<-readRDS('m6.rds')
+m7<-readRDS('m7.rds')
+d7<-readRDS('d7.rds')
+d8<-readRDS('d8.rds')
+```
+
+Model diagnostics
+
+```{r revisitation model diagnostic plots}
+# m1<-lmer(log(revisits)~age+juliand + age*juliand+ (1|id/yr), data=cr_recurse, REML=T)
+plot(m1)
+
+
+# m2<-glmer.nb(revisits~age+sjd + age*sjd+(1|id), data=cr_recurse, REML=T)
+plot(m2)
+
+# m3<-gam(log(revisits)~age+s(juliand, by=age)+s(id, bs="re"), data=cr_recurse)
+m3<-getViz(m3)
+check(m3, a.qq = list(method='tnorm'), a.hist = list(bins=20), a.respoi = list(size=1))
+
+# m4<-gam(revisits~age+s(juliand, by=age)+s(id, bs="re"), family=nb(), data=cr_recurse, REML=TRUE)
+m4<-getViz(m4)
+check(m4, a.qq = list(method='tnorm'), a.hist = list(bins=20), a.respoi = list(size=1))
+
+# m6<-glmer.nb(revisits~age+juliand+(1+juliand|id), data=cr_recurse)
+plot(m6)
+
+
+# m7<-glmer.nb(revisits~age+sjd+(1+sjd|id), data=cr_recurse) #scaled version (julian day) of prior model; ran much faster
+plot(m7)
+
+############
+```
+
+Models fit to duration
+
+```{r duration models}
+# d7<-gam(durations~age+s(juliand, by=age)+s(id, bs="re"), family=nb(), data=cr_recurse)
+# d8<-gam(log(durations)~age+s(juliand, by=age)+s(id, bs='re'), data=cr_recurse)
+```
+
+
+Model checking for the duration gam's
+
+```{r duration model diagnostic plots}
+d7<-getViz(d7)
+# d7<-gam(durations~age+s(juliand, by=age)+s(id, bs="re"), family=nb(), data=cr_recurse)
+check(d7, a.qq = list(method='tnorm'), a.hist = list(bins=20), a.respoi = list(size=1), main='title')
+
+d8<-getViz(d8)
+# d8<-gam(log(durations)~age+s(juliand, by=age)+s(id, bs='re'), data=cr_recurse)
+check(d8, a.qq = list(method='tnorm'), a.hist = list(bins=20), a.respoi = list(size=1))
+
+```
+
