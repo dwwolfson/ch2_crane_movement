@@ -155,6 +155,24 @@ for(i in 1:length(unique_ids)){
   }
 }
 
+
+#' look at an example to see if it is working
+stock_colt<-nsd_db[nsd_db$id=="5C (Stockyard colt)",]
+stock_vlines<-unique(stock_colt$spring_cutoff)
+stock_vlines<-as.data.frame(stock_vlines[2:5])
+colnames(stock_vlines)[1]<-'spring_starts'
+stock_vlines$season<-'spring'
+stock_fall_lines<-as.data.frame(unique(stock_colt$fall_cutoff)[-1])
+colnames(stock_fall_lines)[1]<-'spring_starts' # this is just so names match
+stock_fall_lines$season<-'fall'
+stock_vlines<-rbind(stock_vlines, stock_fall_lines)
+ggplot(filt[filt$id=="5C (Stockyard colt)",], aes(x=t_, y=nsd_))+geom_point()+
+  geom_hline(aes(yintercept=nsd_threshold), color='red')+
+  geom_vline(data=stock_vlines, aes(xintercept = spring_starts, color=season))+
+  ylim(0,1000000000000)
+
+
+
 unique(nsd_db$spring_cutoff)
 unique(nsd_db$fall_cutoff)
 #' These are all over the place, and probably not just becauase gps coverage is spotty.
